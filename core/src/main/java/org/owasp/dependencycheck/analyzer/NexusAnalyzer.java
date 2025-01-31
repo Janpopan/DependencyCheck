@@ -17,7 +17,7 @@
  */
 package org.owasp.dependencycheck.analyzer;
 
-import org.apache.commons.io.FileUtils;
+
 import org.owasp.dependencycheck.Engine;
 import org.owasp.dependencycheck.analyzer.exception.AnalysisException;
 import org.owasp.dependencycheck.data.nexus.MavenArtifact;
@@ -27,6 +27,7 @@ import org.owasp.dependencycheck.data.nexus.NexusV3Search;
 import org.owasp.dependencycheck.dependency.Confidence;
 import org.owasp.dependencycheck.dependency.Dependency;
 import org.owasp.dependencycheck.dependency.Evidence;
+import org.owasp.dependencycheck.utils.FileUtils;
 import org.owasp.dependencycheck.xml.pom.PomUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -281,8 +282,7 @@ public class NexusAnalyzer extends AbstractFileTypeAnalyzer {
                         LOGGER.debug("Unable to delete temp file");
                     }
                     LOGGER.debug("Downloading {}", ma.getPomUrl());
-                    final Downloader downloader = new Downloader(getSettings());
-                    downloader.fetchFile(new URL(ma.getPomUrl()), pomFile);
+                    Downloader.getInstance().fetchFile(new URL(ma.getPomUrl()), pomFile);
                     PomUtils.analyzePOM(dependency, pomFile);
                 } catch (DownloadFailedException ex) {
                     LOGGER.warn("Unable to download pom.xml for {} from Nexus repository; "
@@ -295,7 +295,7 @@ public class NexusAnalyzer extends AbstractFileTypeAnalyzer {
                     LOGGER.warn("pom.xml not found for {} from nexus; "
                             + "this could result in undetected CPE/CVEs.", dependency.getFileName());
                 } finally {
-                    if (pomFile != null && pomFile.exists() && !FileUtils.deleteQuietly(pomFile)) {
+                    if (pomFile != null && pomFile.exists() && !FileUtils.delete(pomFile)) {
                         LOGGER.debug("Failed to delete temporary pom file {}", pomFile);
                         pomFile.deleteOnExit();
                     }
@@ -321,8 +321,7 @@ public class NexusAnalyzer extends AbstractFileTypeAnalyzer {
      */
     public boolean useProxy() {
         try {
-            return getSettings().getString(Settings.KEYS.PROXY_SERVER) != null
-                    && getSettings().getBoolean(Settings.KEYS.ANALYZER_NEXUS_USES_PROXY);
+            return getSettings().getBoolean(Settings.KEYS.ANALYZER_NEXUS_USES_PROXY);
         } catch (InvalidSettingException ise) {
             LOGGER.warn("Failed to parse proxy settings.", ise);
             return false;
