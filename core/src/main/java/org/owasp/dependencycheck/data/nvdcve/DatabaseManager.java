@@ -70,7 +70,7 @@ public final class DatabaseManager {
     /**
      * The URL that discusses upgrading non-H2 databases.
      */
-    public static final String UPGRADE_HELP_URL = "https://jeremylong.github.io/DependencyCheck/data/upgrade.html";
+    public static final String UPGRADE_HELP_URL = "https://dependency-check.github.io/DependencyCheck/data/upgrade.html";
     /**
      * The database driver used to connect to the database.
      */
@@ -197,6 +197,10 @@ public final class DatabaseManager {
                         LOGGER.debug("Unable to connect to the database", ex);
                         throw new DatabaseException("Unable to connect to the database", ex);
                     }
+                } else if (isH2 && ex.getMessage().contains("file version or invalid file header")) {
+                    LOGGER.error("Incompatible or corrupt database found. To resolve this issue please remove the existing "
+                            + "database by running purge");
+                    throw new DatabaseException("Incompatible or corrupt database found; run the purge command to resolve the issue");
                 } else {
                     LOGGER.debug("Unable to connect to the database", ex);
                     throw new DatabaseException("Unable to connect to the database", ex);
