@@ -20,36 +20,32 @@ package org.owasp.dependencycheck.analyzer;
 import com.github.packageurl.MalformedPackageURLException;
 import com.github.packageurl.PackageURL;
 import com.github.packageurl.PackageURLBuilder;
-
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.annotation.concurrent.ThreadSafe;
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonException;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-
-import org.apache.commons.io.FileUtils;
-
+import org.owasp.dependencycheck.Engine;
 import org.owasp.dependencycheck.analyzer.exception.AnalysisException;
 import org.owasp.dependencycheck.data.nvd.ecosystem.Ecosystem;
 import org.owasp.dependencycheck.dependency.Confidence;
 import org.owasp.dependencycheck.dependency.Dependency;
 import org.owasp.dependencycheck.dependency.EvidenceType;
 import org.owasp.dependencycheck.dependency.naming.PurlIdentifier;
-import org.owasp.dependencycheck.Engine;
 import org.owasp.dependencycheck.exception.InitializationException;
 import org.owasp.dependencycheck.utils.Checksum;
 import org.owasp.dependencycheck.utils.FileFilterBuilder;
 import org.owasp.dependencycheck.utils.Settings;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.annotation.concurrent.ThreadSafe;
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonException;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Analyzer which parses a libman.json file to gather module information.
@@ -152,7 +148,7 @@ public class LibmanAnalyzer extends AbstractFileTypeAnalyzer {
      * Performs the analysis.
      *
      * @param dependency the dependency to analyze
-     * @param engine     the engine
+     * @param engine the engine
      * @throws AnalysisException when there's an exception during analysis
      */
     @Override
@@ -169,7 +165,7 @@ public class LibmanAnalyzer extends AbstractFileTypeAnalyzer {
             return;
         }
 
-        try (JsonReader jsonReader = Json.createReader(FileUtils.openInputStream(dependencyFile))) {
+        try (JsonReader jsonReader = Json.createReader(Files.newInputStream(dependencyFile.toPath()))) {
             final JsonObject json = jsonReader.readObject();
 
             final String libmanVersion = json.getString("version");
@@ -183,7 +179,7 @@ public class LibmanAnalyzer extends AbstractFileTypeAnalyzer {
             final JsonArray libraries = json.getJsonArray("libraries");
 
             libraries.forEach(e -> {
-                JsonObject reference = (JsonObject) e;
+                final JsonObject reference = (JsonObject) e;
 
                 final String provider = reference.getString("provider", defaultProvider);
                 final String library = reference.getString("library");
@@ -212,8 +208,10 @@ public class LibmanAnalyzer extends AbstractFileTypeAnalyzer {
                 child.setName(name);
                 child.setVersion(version);
 
-                child.addEvidence(EvidenceType.VENDOR, FILE_NAME, "vendor", (vendor != null ? vendor : name),
-                        Confidence.HIGHEST);
+                if (vendor != null) {
+                    child.addEvidence(EvidenceType.VENDOR, FILE_NAME, "vendor", vendor, Confidence.HIGHEST);
+                }
+                child.addEvidence(EvidenceType.VENDOR, FILE_NAME, "name", name, Confidence.HIGH);
                 child.addEvidence(EvidenceType.PRODUCT, FILE_NAME, "name", name, Confidence.HIGHEST);
                 child.addEvidence(EvidenceType.VERSION, FILE_NAME, "version", version, Confidence.HIGHEST);
 
